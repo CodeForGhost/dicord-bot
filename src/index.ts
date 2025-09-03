@@ -2,8 +2,8 @@ import 'dotenv/config';
 import { Client, Collection, GatewayIntentBits, ChatInputCommandInteraction } from 'discord.js';
 import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
-import connectDB from './config/database.js';
+import { initDatabase } from './database/connection';
+import { runMigrations } from './database/migrations';
 
 interface Command {
   data: {
@@ -27,59 +27,79 @@ const client = new Client({
 
 client.commands = new Collection<string, Command>();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const commandsPath = path.join(__dirname, 'commands');
+// Load commands from discord/commands folder
+const commandsPath = path.join(__dirname, 'discord', 'commands');
 const commandFiles = fs
   .readdirSync(commandsPath)
   .filter(file => file.endsWith('.js') || file.endsWith('.ts'));
 
-for (const file of commandFiles) {
-  const filePath = path.join(commandsPath, file);
-  const command = (await import(filePath)) as { default: Command };
+const loadCommands = async (): Promise<void> => {
+  for (const file of commandFiles) {
+    const filePath = path.join(commandsPath, file);
+    const command = require(filePath).default as Command;
 
-  if (command.default && 'data' in command.default && 'execute' in command.default) {
-    client.commands.set(command.default.data.name, command.default);
-  } else {
-    console.warn(
-      `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`
-    );
-  }
-}
-
-client.once('ready', async () => {
-  await connectDB();
-  console.warn(`Ready! Logged in as ${client.user?.tag}`);
-});
-
-client.on('interactionCreate', async interaction => {
-  if (!interaction.isChatInputCommand()) return;
-
-  const command = client.commands.get(interaction.commandName);
-
-  if (!command) {
-    console.error(`No command matching ${interaction.commandName} was found.`);
-    return;
-  }
-
-  try {
-    await command.execute(interaction);
-  } catch (error) {
-    console.error(error);
-    const reply = { content: 'There was an error while executing this command!', ephemeral: true };
-
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp(reply);
+    if (command && 'data' in command && 'execute' in command) {
+      client.commands.set(command.data.name, command);
+      console.warn(`Loaded command: ${command.data.name}`);
     } else {
-      await interaction.reply(reply);
+      console.warn(
+        `[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`
+      );
     }
   }
-});
+};
 
+// Load events from discord/events folder
+const eventsPath = path.join(__dirname, 'discord', 'events');
+const eventFiles = fs
+  .readdirSync(eventsPath)
+  .filter(file => file.endsWith('.js') || file.endsWith('.ts'));
+
+const loadEvents = async (): Promise<void> => {
+  for (const file of eventFiles) {
+    const filePath = path.join(eventsPath, file);
+    const event = require(filePath).default as {
+      name: string;
+      once?: boolean;
+      execute: (...args: unknown[]) => void | Promise<void>;
+    };
+
+    if (event && 'name' in event && 'execute' in event) {
+      if (event.once) {
+        client.once(event.name, (...args) => event.execute(...args));
+      } else {
+        client.on(event.name, (...args) => event.execute(...args));
+      }
+      console.warn(`Loaded event: ${event.name}`);
+    } else {
+      console.warn(
+        `[WARNING] The event at ${filePath} is missing a required "name" or "execute" property.`
+      );
+    }
+  }
+};
+
+// Validate environment variables
 if (!process.env.DISCORD_TOKEN) {
-  console.error('DISCORD_TOKEN environment variable is not set');
+  console.error('ERROR: DISCORD_TOKEN is not set in environment variables!');
   process.exit(1);
 }
 
-client.login(process.env.DISCORD_TOKEN);
+if (!process.env.DISCORD_CLIENT_ID) {
+  console.error('ERROR: DISCORD_CLIENT_ID is not set in environment variables!');
+  process.exit(1);
+}
+
+// Initialize database and run migrations on startup
+(async (): Promise<void> => {
+  try {
+    await loadCommands();
+    await loadEvents();
+    await initDatabase();
+    await runMigrations();
+    await client.login(process.env.DISCORD_TOKEN);
+  } catch (error) {
+    console.error('Failed to start bot:', error);
+    process.exit(1);
+  }
+})();
