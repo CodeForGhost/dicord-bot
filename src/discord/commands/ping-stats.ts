@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, TextChannel } from 'discord.js';
-import { GuildSettingsModel } from '../../database/guildSettings.js';
+import { GuildSettingsModel } from '../../database/guildSettings';
 
 export default {
   data: new SlashCommandBuilder()

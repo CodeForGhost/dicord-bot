@@ -1,4 +1,4 @@
-import { getDatabase } from './connection.js';
+import { getDatabase } from './connection';
 
 export interface GuildSettings {
   guild_id: string;

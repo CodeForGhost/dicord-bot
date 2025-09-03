@@ -1,4 +1,4 @@
-import { getDatabase } from './connection.js';
+import { getDatabase } from './connection';
 
 export const runMigrations = async (): Promise<void> => {
   const db = getDatabase();

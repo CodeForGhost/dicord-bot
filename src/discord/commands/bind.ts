@@ -4,7 +4,7 @@ import {
   PermissionFlagsBits,
   ChannelType,
 } from 'discord.js';
-import { GuildSettingsModel } from '../../database/guildSettings.js';
+import { GuildSettingsModel } from '../../database/guildSettings';
 
 const VALID_RESOURCES = ['stats_channel', 'leaderboard_channel', 'admin_role'] as const;
 type Resource = (typeof VALID_RESOURCES)[number];
