@@ -1,11 +1,11 @@
 {
   "name": "clipping-discord",
   "version": "1.0.0",
-  "type": "commonjs",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "npm run build && node dist/index.js",
+    "start": "npm run build && node dist/src/index.js",
     "dev": "nodemon --exec tsx src/index.ts",
     "deploy": "tsx deploy-commands.ts",
     "lint": "eslint src/**/*.ts",
