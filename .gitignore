@@ -29,6 +29,12 @@ lerna-debug.log*
 # Optional npm cache directory
 .npm
 
+# Database
+data/
+*.db
+*.sqlite
+*.sqlite3
+
 # IDE files
 .vscode/
 .idea/
