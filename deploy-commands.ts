@@ -1,7 +1,11 @@
-const { REST, Routes } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
-require('dotenv/config');
+import { REST, Routes } from 'discord.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import 'dotenv/config';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface Command {
   data: {
@@ -9,21 +13,26 @@ interface Command {
   };
 }
 
-const commands: object[] = [];
-const commandsPath = path.join(__dirname, 'src', 'discord', 'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter((file: string) => file.endsWith('.ts'));
+const loadCommands = async (): Promise<object[]> => {
+  const commands: object[] = [];
+  const commandsPath = path.join(__dirname, 'src', 'discord', 'commands');
+  const commandFiles = fs.readdirSync(commandsPath).filter((file: string) => file.endsWith('.ts'));
 
-for (const file of commandFiles) {
-  const filePath = path.join(commandsPath, file);
-  const command = require(filePath).default as Command;
+  for (const file of commandFiles) {
+    const filePath = path.join(commandsPath, file);
+    const fileUrl = `file://${filePath.replace(/\\/g, '/')}`;
+    const command = (await import(fileUrl)).default as Command;
 
-  if (command && 'data' in command) {
-    commands.push(command.data.toJSON());
-    console.warn(`Found command: ${file}`);
-  } else {
-    console.warn(`[WARNING] The command at ${filePath} is missing a required "data" property.`);
+    if (command && 'data' in command) {
+      commands.push(command.data.toJSON());
+      console.warn(`Found command: ${file}`);
+    } else {
+      console.warn(`[WARNING] The command at ${filePath} is missing a required "data" property.`);
+    }
   }
-}
+  
+  return commands;
+};
 
 if (!process.env.DISCORD_TOKEN || !process.env.DISCORD_CLIENT_ID) {
   console.error('Missing required environment variables: DISCORD_TOKEN and DISCORD_CLIENT_ID');
@@ -34,17 +43,18 @@ const rest = new REST().setToken(process.env.DISCORD_TOKEN);
 
 (async () => {
   try {
+    const commands = await loadCommands();
     console.warn(`Started refreshing ${commands.length} application (/) commands.`);
 
     let data: unknown[];
     if (process.env.GUILD_ID) {
       data = (await rest.put(
-        Routes.applicationGuildCommands(process.env.DISCORD_CLIENT_ID, process.env.GUILD_ID),
+        Routes.applicationGuildCommands(process.env.DISCORD_CLIENT_ID!, process.env.GUILD_ID),
         { body: commands }
       )) as unknown[];
       console.warn(`Successfully reloaded ${data.length} guild application (/) commands.`);
     } else {
-      data = (await rest.put(Routes.applicationCommands(process.env.DISCORD_CLIENT_ID), {
+      data = (await rest.put(Routes.applicationCommands(process.env.DISCORD_CLIENT_ID!), {
         body: commands,
       })) as unknown[];
       console.warn(`Successfully reloaded ${data.length} global application (/) commands.`);

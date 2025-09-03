@@ -2,8 +2,12 @@ import 'dotenv/config';
 import { Client, Collection, GatewayIntentBits, ChatInputCommandInteraction } from 'discord.js';
 import path from 'path';
 import fs from 'fs';
-import { initDatabase } from './database/connection';
-import { runMigrations } from './database/migrations';
+import { fileURLToPath } from 'url';
+import { initDatabase } from './database/connection.js';
+import { runMigrations } from './database/migrations.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface Command {
   data: {
@@ -29,14 +33,14 @@ client.commands = new Collection<string, Command>();
 
 // Load commands from discord/commands folder
 const commandsPath = path.join(__dirname, 'discord', 'commands');
-const commandFiles = fs
-  .readdirSync(commandsPath)
-  .filter(file => file.endsWith('.js') || file.endsWith('.ts'));
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js') || file.endsWith('.ts'));
 
 const loadCommands = async (): Promise<void> => {
   for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
-    const command = require(filePath).default as Command;
+    const fileUrl = `file://${filePath.replace(/\\/g, '/')}`;
+    const commandModule = await import(fileUrl);
+    const command = commandModule.default as Command;
 
     if (command && 'data' in command && 'execute' in command) {
       client.commands.set(command.data.name, command);
@@ -51,14 +55,14 @@ const loadCommands = async (): Promise<void> => {
 
 // Load events from discord/events folder
 const eventsPath = path.join(__dirname, 'discord', 'events');
-const eventFiles = fs
-  .readdirSync(eventsPath)
-  .filter(file => file.endsWith('.js') || file.endsWith('.ts'));
+const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js') || file.endsWith('.ts'));
 
 const loadEvents = async (): Promise<void> => {
   for (const file of eventFiles) {
     const filePath = path.join(eventsPath, file);
-    const event = require(filePath).default as {
+    const fileUrl = `file://${filePath.replace(/\\/g, '/')}`;
+    const eventModule = await import(fileUrl);
+    const event = eventModule.default as {
       name: string;
       once?: boolean;
       execute: (...args: unknown[]) => void | Promise<void>;

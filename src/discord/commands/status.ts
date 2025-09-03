@@ -4,7 +4,7 @@ import {
   EmbedBuilder,
   PermissionFlagsBits,
 } from 'discord.js';
-import { GuildSettingsModel } from '../../database/guildSettings';
+import { GuildSettingsModel } from '../../database/guildSettings.js';
 
 export default {
   data: new SlashCommandBuilder()
