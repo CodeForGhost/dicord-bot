@@ -65,6 +65,17 @@ For development with auto-restart:
 npm run dev
 ```
 
+## Build Error Issue
+```
+update this lines on index.ts file
+
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js') || file.endsWith('.ts'));
+remove the "|| file.endsWith('.ts')"
+
+const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js') || file.endsWith('.ts'));
+remove the || file.endsWith('.ts')
+```
+
 ## Project Structure
 
 ```
