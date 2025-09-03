@@ -1,183 +1,136 @@
-# Discord Clip Management Bot 🎬
+# Discord Bot - Resource Binding System
 
-A TypeScript Discord bot that enables content creators to submit video clips for centralized review and management, streamlining the content curation process for communities, agencies, and content teams.
-
-## ✨ Features Overview
-
-- **Type-Safe Development** - Built with TypeScript 5.9+ for robust, maintainable code
-- **Modern Code Quality** - ESLint + Prettier for consistent formatting and best practices
-- **Production Ready** - ES Modules, proper error handling, and comprehensive logging
+A Discord bot that demonstrates clean architecture with resource binding capabilities. The bot allows administrators to bind channels and roles to specific resources and provides graceful degradation when resources are deleted.
 
 ## Features
 
-### Core Commands
+### Core Functionality
+- **Command & Event Autoloading** - Commands and events are automatically loaded from their respective folders
+- **Resource Binding** - Bind channels and roles to specific resources using channel/role IDs (not names)
+- **Health Monitoring** - Check the status of bound resources and detect missing/deleted items
+- **Graceful Degradation** - Bot continues operating even when bound resources are deleted
+- **SQLite Database** - Lightweight local database for storing guild settings
 
-- **`/submit`** - Submit video clips with title, URL, description, and tags
-- **`/review`** - Review submitted clips (approve/reject/mark under review) - Moderator only
-- **`/clips`** - Browse clips with filtering by status, submitter, and pagination
-- **`/find`** - Search clips by ID, title/description text, or tags
+### Commands
 
-### Key Features
+- **`/bind <resource> <#channel|@role>`** - Bind a resource to a channel or role (Admin only)
+  - Resources: `stats_channel`, `leaderboard_channel`, `admin_role`
+- **`/status`** - Display current bindings and their health status (Admin only)
+- **`/leaderboard`** - Post a mock leaderboard to the bound leaderboard channel
+- **`/ping-stats`** - Send a "pong" message to the bound stats channel
 
-- **Role-based Access Control** - Review commands require moderation permissions
-- **MongoDB Integration** - Persistent clip storage with indexing
-- **Status Tracking** - Pending → Under Review → Approved/Rejected workflow
-- **Direct Messaging** - Automatic notifications to submitters when reviewed
-- **Rich Embeds** - Beautiful Discord embeds with proper formatting
-- **Search & Filter** - Comprehensive search capabilities
-- **Pagination** - Handle large amounts of clips efficiently
+## Setup
 
-## Setup Instructions
+### Prerequisites
+- Node.js 16+ 
+- Discord Bot Application (created via Discord Developer Portal)
 
-### 1. Prerequisites
+### Installation
 
-- Node.js 16+ installed
-- MongoDB database (local or cloud)
-- Discord Bot Application
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd clipping-discord
+```
 
-### 2. Discord Bot Setup
+2. Install dependencies:
+```bash
+npm install
+```
 
-1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
-2. Create a new application
-3. Go to "Bot" section and create a bot
-4. Copy the bot token
-5. Go to "OAuth2" → "URL Generator"
-6. Select "bot" and "applications.commands" scopes
-7. Select necessary permissions (Send Messages, Use Slash Commands, Moderate Members)
-8. Invite the bot to your server using the generated URL
+3. Configure environment variables:
+```bash
+cp .example.env .env
+```
 
-### 3. Environment Configuration
+Edit `.env` with your values:
+```env
+DISCORD_TOKEN=your_bot_token_here
+DISCORD_CLIENT_ID=your_client_id_here
+GUILD_ID=your_test_server_id_here  # Optional: for guild-specific commands
+```
 
-1. Copy `.example.env` to `.env`:
-   ```bash
-   cp .example.env .env
-   ```
+4. Deploy slash commands:
+```bash
+npm run deploy
+```
 
-2. Fill in your environment variables:
-   ```env
-   DISCORD_TOKEN=your_bot_token_here
-   MONGODB_URI=mongodb://localhost:27017/clipmanager
-   CLIENT_ID=your_client_id
-   GUILD_ID=your_test_server_id  # Optional: for guild-specific commands
-   PORT=3000
-   ```
+5. Start the bot:
+```bash
+npm start
+```
 
-### 4. Installation & Deployment
+For development with auto-restart:
+```bash
+npm run dev
+```
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
+## Project Structure
 
-2. Build the TypeScript project:
-   ```bash
-   npm run build
-   ```
+```
+src/
+├── discord/
+│   ├── commands/      # Slash commands (autoloaded)
+│   │   ├── bind.ts
+│   │   ├── status.ts
+│   │   ├── leaderboard.ts
+│   │   └── ping-stats.ts
+│   └── events/        # Discord events (autoloaded)
+│       ├── ready.ts
+│       └── interactionCreate.ts
+├── database/
+│   ├── connection.ts  # SQLite connection management
+│   ├── migrations.ts  # Database migrations
+│   └── guildSettings.ts # Guild settings model
+└── index.ts          # Main bot entry point
+```
 
-3. Deploy slash commands:
-   ```bash
-   npm run deploy
-   ```
+## Development
 
-4. Start the bot:
-   ```bash
-   npm start
-   ```
-
-   For development with auto-restart:
-   ```bash
-   npm run dev
-   ```
-
-### Development Commands
+### Available Scripts
 
 - **`npm run build`** - Compile TypeScript to JavaScript
 - **`npm run dev`** - Start development server with hot reload
 - **`npm run lint`** - Check code with ESLint
 - **`npm run lint:fix`** - Auto-fix ESLint issues
 - **`npm run format`** - Format code with Prettier
-- **`npm run type-check`** - Check TypeScript types without building
+- **`npm run type-check`** - Check TypeScript types
+- **`npm run deploy`** - Deploy slash commands to Discord
 
-## Usage Examples
+### Code Quality
 
-### Submit a Clip
-```
-/submit title:"Epic Gaming Moment" url:"https://youtube.com/watch?v=example" description:"Amazing clutch play" tags:"gaming, clutch, highlight"
-```
+The project includes:
+- **TypeScript** with strict mode enabled
+- **ESLint** for code linting
+- **Prettier** for code formatting
+- **GitHub Actions** for CI/CD (runs linting on PRs)
 
-### Review a Clip (Moderators)
-```
-/review clip_id:"abc123-def456" action:"approved" notes:"Great content, well edited"
-```
+### Database
 
-### Browse Clips
-```
-/clips status:"pending" page:1
-/clips submitter:@username
-```
+The bot uses SQLite with a single `guild_settings` table:
+- `guild_id` (PRIMARY KEY)
+- `stats_channel_id`
+- `leaderboard_channel_id`
+- `admin_role_id`
+- `updated_at`
 
-### Search Clips
-```
-/find clip_id:"abc123-def456"
-/find search:"gaming"
-/find tag:"highlight"
-```
+Database migrations are run automatically on startup and are idempotent (safe to run multiple times).
 
-## Database Schema
+## Architecture Highlights
 
-The bot uses MongoDB with the following clip schema:
+1. **Clean Folder Structure** - Commands and events are organized in separate folders
+2. **ID-based Binding** - Resources are bound using Discord IDs, not names
+3. **Graceful Degradation** - Missing resources are logged but don't crash the bot
+4. **Environment Validation** - Required environment variables are validated on startup
+5. **Type Safety** - Full TypeScript support with strict mode
 
-- **id**: Unique identifier (UUID)
-- **submitterId/Name**: Discord user info
-- **title/description**: Clip metadata
-- **videoUrl**: Link to the video
-- **status**: pending/approved/rejected/under_review
-- **reviewerId/Name**: Reviewer info
-- **reviewNotes**: Feedback from reviewer
-- **tags**: Array of searchable tags
-- **timestamps**: Submission and review dates
+## GitHub Actions
 
-## Project Structure
-
-```
-src/
-├── commands/
-│   ├── submit.ts     # Submit clips
-│   ├── review.ts     # Review clips (moderator)
-│   ├── clips.ts      # Browse clips
-│   └── find.ts       # Search clips
-├── config/
-│   └── database.ts   # MongoDB connection
-├── models/
-│   └── Clip.ts       # Clip data model
-├── types/
-│   └── index.ts      # TypeScript type definitions
-└── index.ts          # Main bot file
-```
-
-## Permissions
-
-- **All Users**: Can submit clips and view/search clips
-- **Moderators**: Can review clips (requires "Moderate Members" permission)
-
-## Development
-
-The bot is built with:
-- **TypeScript 5.9+** - Type-safe JavaScript with modern features
-- **Discord.js v14** - Discord API wrapper with full type support
-- **Mongoose 8+** - MongoDB ODM with TypeScript integration
-- **UUID** - Unique ID generation
-- **ESLint + Prettier** - Code linting and formatting
-- **ES Modules** - Modern module system
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+The project includes a GitHub Action that runs on pull requests:
+- Installs dependencies
+- Runs ESLint
+- Checks TypeScript types
 
 ## License
 
-ISC License
+ISC
